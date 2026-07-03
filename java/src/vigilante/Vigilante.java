@@ -1,6 +1,8 @@
 package vigilante;
 
 import com.formdev.flatlaf.FlatLightLaf;
+import raft.ClienteCluster;
+import raft.Par;
 
 import javax.swing.*;
 import javax.swing.border.EmptyBorder;
@@ -9,9 +11,10 @@ import javax.swing.table.DefaultTableModel;
 import java.awt.*;
 import java.util.List;
 
-// Cliente Vigilante - ventana de referencia de UX/UI para el equipo.
-// Muestra el registro de detecciones que llega del cluster Raft.
-// De momento usa datos de ejemplo; luego se conecta al lider por socket.
+// Cliente Vigilante - la interfaz que ve el registro de detecciones del cluster.
+// Se conecta al cluster Raft por sockets (via ClienteCluster) y refresca la tabla
+// cada segundo leyendo el registro cometido del lider. Si no se le pasan nodos,
+// arranca en modo demo con datos de ejemplo (solo para ver el diseno).
 public class Vigilante extends JFrame {
 
     // Escala de espaciado base 8px. Todo margen o separacion es multiplo de esto.
@@ -24,8 +27,11 @@ public class Vigilante extends JFrame {
     static final Color LINEA = new Color(229, 231, 235);
 
     private final DefaultTableModel modelo;
+    private final ClienteCluster cluster;   // null en modo demo
+    private JLabel estadoConexion;
 
-    public Vigilante() {
+    public Vigilante(ClienteCluster cluster) {
+        this.cluster = cluster;
         setTitle("Cliente Vigilante - CC4P1");
         setDefaultCloseOperation(EXIT_ON_CLOSE);
         setSize(720, 480);
@@ -41,7 +47,46 @@ public class Vigilante extends JFrame {
         add(tabla(), BorderLayout.CENTER);
         add(pie(), BorderLayout.SOUTH);
 
-        cargarEjemplo();
+        if (cluster == null) {
+            cargarEjemplo();
+        } else {
+            iniciarRefresco();
+        }
+    }
+
+    // Refresca el registro leyendo del cluster cada segundo, en un hilo aparte.
+    // El acceso a la tabla se hace en el hilo de Swing con invokeLater.
+    private void iniciarRefresco() {
+        Thread t = new Thread(() -> {
+            while (true) {
+                List<String> dets = cluster.leerRegistro();
+                boolean conectado = dets != null;
+                SwingUtilities.invokeLater(() -> pintar(dets, conectado));
+                try { Thread.sleep(1000); } catch (InterruptedException e) { return; }
+            }
+        }, "vigilante-refresco");
+        t.setDaemon(true);
+        t.start();
+    }
+
+    // Reemplaza el contenido de la tabla con el registro recibido.
+    private void pintar(List<String> detecciones, boolean conectado) {
+        modelo.setRowCount(0);
+        if (detecciones != null) {
+            for (String d : detecciones) {
+                // formato del comando:  tipo,imagenRef,fechaHora,camara
+                String[] campos = d.split(",", -1);
+                String tipo = campos.length > 0 ? campos[0] : "?";
+                String fechaHora = campos.length > 2 ? campos[2] : "";
+                String camara = campos.length > 3 ? campos[3] : "";
+                modelo.addRow(new Object[]{tipo, camara, fechaHora});
+            }
+        }
+        contador.setText(modelo.getRowCount() + " detecciones");
+        if (estadoConexion != null) {
+            estadoConexion.setText(conectado ? "●  en vivo" : "●  sin conexion");
+            estadoConexion.setForeground(conectado ? VIVO : new Color(220, 38, 38));
+        }
     }
 
     // Cabecera: titulo a la izquierda, estado "en vivo" a la derecha.
@@ -52,12 +97,12 @@ public class Vigilante extends JFrame {
         JLabel titulo = new JLabel("Registro de detecciones");
         titulo.setFont(titulo.getFont().deriveFont(Font.BOLD, 18f));
 
-        JLabel vivo = new JLabel("●  en vivo");
-        vivo.setForeground(VIVO);
-        vivo.setFont(vivo.getFont().deriveFont(Font.BOLD, 12f));
+        estadoConexion = new JLabel("●  en vivo");
+        estadoConexion.setForeground(VIVO);
+        estadoConexion.setFont(estadoConexion.getFont().deriveFont(Font.BOLD, 12f));
 
         barra.add(titulo, BorderLayout.WEST);
-        barra.add(vivo, BorderLayout.EAST);
+        barra.add(estadoConexion, BorderLayout.EAST);
 
         JPanel wrap = new JPanel(new BorderLayout());
         wrap.add(barra, BorderLayout.CENTER);
@@ -125,8 +170,19 @@ public class Vigilante extends JFrame {
         for (String[] d : datos) agregar(d[0], d[1], d[2]);
     }
 
+    // Sin argumentos: modo demo (datos de ejemplo).
+    // Con nodos  id:host:puerto ...: se conecta al cluster y refresca en vivo.
+    //   java vigilante.Vigilante 1:127.0.0.1:9001 2:127.0.0.1:9002 3:127.0.0.1:9003
     public static void main(String[] args) {
         FlatLightLaf.setup();
-        SwingUtilities.invokeLater(() -> new Vigilante().setVisible(true));
+        final ClienteCluster cluster;
+        if (args.length == 0) {
+            cluster = null;
+            System.out.println("Vigilante en modo demo (sin cluster). Pasa nodos para conectar.");
+        } else {
+            List<Par> nodos = ClienteCluster.parsearNodos(args, 0);
+            cluster = new ClienteCluster(nodos);
+        }
+        SwingUtilities.invokeLater(() -> new Vigilante(cluster).setVisible(true));
     }
 }

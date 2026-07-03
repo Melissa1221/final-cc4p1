@@ -1,0 +1,8 @@
+# compilados y temporales
+java/out/
+*.class
+__pycache__/
+*.pyc
+go/**/bin/
+# el jar de FlatLaf SI se versiona (runtime local, sin internet)
+!java/lib/*.jar

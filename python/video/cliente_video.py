@@ -19,18 +19,20 @@ class ClienteVideo:
         self.f = self.sock.makefile("rwb")
 
     def pedir_frame(self):
-        # devuelve (img (3,32,32) float32, etiqueta str) o None si se corto
+        # devuelve (img float32, etiqueta str) o None si se corto. La forma del
+        # frame viene en la cabecera (RGB 3x32x32 o gris 1x28x28).
         self.f.write(b"PEDIR_FRAME\n")
         self.f.flush()
         cabecera = self.f.readline().decode("utf-8").strip()
         if not cabecera.startswith("FRAME|"):
             return None
-        _, etiqueta, nbytes = cabecera.split("|")
+        _, etiqueta, forma, nbytes = cabecera.split("|")
+        dims = tuple(int(d) for d in forma.split("x"))
         nbytes = int(nbytes)
         crudo = self._leer_exacto(nbytes)
         if crudo is None:
             return None
-        img = np.frombuffer(crudo, dtype=np.float32).reshape(3, 32, 32)
+        img = np.frombuffer(crudo, dtype=np.float32).reshape(dims)
         return img.copy(), etiqueta
 
     def _leer_exacto(self, n):

@@ -18,23 +18,35 @@
 # La etiqueta real se manda solo para que el testeo pueda medir su acierto; la
 # CNN NO la usa para reconocer, reconoce sola desde los pixeles.
 
+import os
 import socket
 import sys
 import threading
 import numpy as np
 
 sys.path.insert(0, ".")
-from cnn.cifar import cargar
 
 
 class ServidorVideo:
     def __init__(self, host, puerto, max_por_clase=200):
         self.host = host
         self.puerto = puerto
-        # usa el conjunto de test de CIFAR como banco de frames (objetos reales)
-        _, _, Xte, yte, self.nombres = cargar(max_por_clase=max_por_clase)
-        self.frames = Xte           # (N, 3, 32, 32) float32
-        self.etiquetas = yte
+        # banco de frames. Prioriza CIFAR (objetos reales); si no esta descargado,
+        # cae a las figuras geometricas para que el pipeline sea probable sin
+        # internet. La CNN del testeo carga el modelo que corresponda.
+        if os.path.isdir("datos/cifar-10-batches-py"):
+            from cnn.cifar import cargar
+            _, _, Xte, yte, self.nombres = cargar(max_por_clase=max_por_clase)
+            self.frames = Xte           # (N, 3, 32, 32) float32
+            self.etiquetas = yte
+            self.fuente = "cifar"
+        else:
+            from cnn.dataset import generar, CLASES
+            X, y = generar(max(1, max_por_clase // 5))   # generar da k por clase
+            self.frames = X             # (N, 1, 28, 28) float32
+            self.etiquetas = y
+            self.nombres = list(CLASES)
+            self.fuente = "figuras"
         self._idx = 0
         self._lock = threading.Lock()
         self._servidor = None
@@ -57,7 +69,11 @@ class ServidorVideo:
                 if msg == "PEDIR_FRAME":
                     img, etq = self._siguiente_frame()
                     crudo = np.ascontiguousarray(img, dtype=np.float32).tobytes()
-                    cabecera = "FRAME|%s|%d\n" % (self.nombres[etq], len(crudo))
+                    # la cabecera lleva la forma para que el cliente reconstruya
+                    # el frame sin saber de antemano si es RGB 32 o gris 28.
+                    forma = "x".join(str(d) for d in img.shape)
+                    cabecera = "FRAME|%s|%s|%d\n" % (
+                        self.nombres[etq], forma, len(crudo))
                     f.write(cabecera.encode("utf-8"))
                     f.write(crudo)
                     f.flush()

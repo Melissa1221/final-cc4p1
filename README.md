@@ -74,6 +74,37 @@ cd go && go run ./cmd/arrancar-nodo <miId> <id:host:puerto> ...
 
 Mas detalle en [go/README.md](go/README.md).
 
+## Parte de Python (ya funciona end-to-end)
+
+La CNN de reconocimiento, el nodo Raft en Python y el Servidor de Testeo estan
+implementados y probados. Todo con la stdlib + NumPy, sin frameworks.
+
+- CNN desde cero con NumPy (5 clases de figuras, ~97% accuracy), con
+  entrenamiento distribuido en varios procesos.
+- Nodo Raft en Python que habla el mismo protocolo que Java y Go.
+- Servidor de Testeo: usa la CNN, 3 camaras por hilos, inserta al cluster.
+
+```bash
+cd python
+python3 cnn/entrenar.py                                          # entrena la CNN
+python3 raft/arrancar.py 2 1:127.0.0.1:9001 2:127.0.0.1:9002 3:127.0.0.1:9003
+python3 testeo/servidor_testeo.py 1:127.0.0.1:9001 2:127.0.0.1:9002 3:127.0.0.1:9003
+```
+
+Mas detalle en [python/README.md](python/README.md).
+
+## Sistema completo end-to-end (los 3 lenguajes)
+
+`scripts/e2e-completo.sh` levanta un cluster heterogeneo (Java + Python + Go de
+Junior), corre el Servidor de Testeo con la CNN, y verifica que los tres nodos
+replican el registro identico. Incluye prueba de caida del lider.
+
+```bash
+./scripts/e2e-completo.sh
+```
+
+El detalle de como se construyo todo esta en [docs/COMO-LO-HICE.md](docs/COMO-LO-HICE.md).
+
 ## Requisitos
 
 - Java 8 o superior (probado en OpenJDK 26).

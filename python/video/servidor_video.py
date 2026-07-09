@@ -36,7 +36,14 @@ class ServidorVideo:
         # internet. La CNN del testeo carga el modelo que corresponda.
         if os.path.isdir("datos/cifar-10-batches-py"):
             from cnn.cifar import cargar
-            _, _, Xte, yte, self.nombres = cargar(max_por_clase=max_por_clase)
+            # sirve solo las clases con las que se entreno el modelo (si existe
+            # clases_cifar.npy), para que el reconocimiento en vivo sea coherente.
+            clases = None
+            if os.path.exists("datos/clases_cifar.npy"):
+                import numpy as _np
+                clases = [str(c) for c in _np.load("datos/clases_cifar.npy")]
+            _, _, Xte, yte, self.nombres = cargar(clases=clases,
+                                                  max_por_clase=max_por_clase)
             self.frames = Xte           # (N, 3, 32, 32) float32
             self.etiquetas = yte
             self.fuente = "cifar"

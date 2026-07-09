@@ -13,13 +13,27 @@ matplotlib.use("Agg")  # sin ventana, solo guarda a archivo
 import matplotlib.pyplot as plt
 
 
+def _a_imagen(frame):
+    # acepta (H,W) gris, (1,H,W) gris con canal, o (3,H,W) RGB.
+    # devuelve algo que imshow entiende: (H,W) gris o (H,W,3) RGB.
+    if frame.ndim == 2:
+        return frame, True
+    if frame.shape[0] == 3:          # RGB canal primero -> (H,W,3)
+        return np.transpose(frame, (1, 2, 0)), False
+    return frame[0], True            # (1,H,W) gris
+
+
 def guardar_png(frame, tipo, camara, ruta):
-    """Guarda un PNG con la figura 28x28 y la etiqueta reconocida encima."""
+    """Guarda un PNG con la imagen detectada y la etiqueta reconocida encima.
+    Soporta figuras 28x28 en gris y objetos CIFAR 32x32 RGB."""
     os.makedirs(os.path.dirname(ruta), exist_ok=True)
-    img = frame[0] if frame.ndim == 3 else frame  # (28,28)
+    img, es_gris = _a_imagen(frame)
 
     fig, ax = plt.subplots(figsize=(2.6, 2.6), dpi=100)
-    ax.imshow(img, cmap="gray_r", vmin=0, vmax=1)
+    if es_gris:
+        ax.imshow(img, cmap="gray_r", vmin=0, vmax=1)
+    else:
+        ax.imshow(np.clip(img, 0, 1))
     ax.set_xticks([]); ax.set_yticks([])
     # caja + etiqueta estilo "Detecto: X"
     for spine in ax.spines.values():

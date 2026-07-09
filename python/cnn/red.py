@@ -136,15 +136,19 @@ def softmax(z):
 
 
 class CNN:
-    def __init__(self, num_clases, semilla=0):
+    # canales: 1 para escala de grises (figuras 28x28), 3 para RGB (CIFAR 32x32).
+    # tam: lado de la imagen de entrada. La primera Conv se ajusta a los canales.
+    def __init__(self, num_clases, semilla=0, canales=1, tam=28):
         rng = np.random.default_rng(semilla)
+        self.canales = canales
+        self.tam = tam
         self.capas = [
-            Conv(1, 8, 3, rng), ReLU(), MaxPool(2),
+            Conv(canales, 8, 3, rng), ReLU(), MaxPool(2),
             Conv(8, 16, 3, rng), ReLU(), MaxPool(2),
             Flatten(),
         ]
         # calculo la dimension aplanada con un forward de prueba
-        dummy = np.zeros((1, 1, 28, 28), dtype=np.float32)
+        dummy = np.zeros((1, canales, tam, tam), dtype=np.float32)
         h = dummy
         for c in self.capas:
             h = c.forward(h)

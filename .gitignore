@@ -8,9 +8,10 @@ go/**/bin/
 !java/lib/*.jar
 
 # artefactos generados de python
-python/datos/detecciones/
+# toda la carpeta datos: dataset CIFAR (170MB), pesos entrenados (.npz),
+# imagenes de detecciones. Nada de esto va al repo.
+python/datos/
 python/**/__pycache__/
-python/datos/pesos_cnn.npz
 
 # binarios go compilados
 go/nodo-raft

@@ -8,13 +8,22 @@ go/**/bin/
 !java/lib/*.jar
 
 # artefactos generados de python
-python/datos/detecciones/
+# toda la carpeta datos: dataset CIFAR (170MB), pesos entrenados (.npz),
+# imagenes de detecciones. Nada de esto va al repo.
+python/datos/
 python/**/__pycache__/
-python/datos/pesos_cnn.npz
 
 # binarios go compilados
 go/nodo-raft
 go/**/gonodo*
+
+# artefactos de build del cliente movil (android/gradle)
+mobile/.gradle/
+mobile/build/
+mobile/app/build/
+mobile/local.properties
+mobile/.idea/
+mobile/**/*.apk
 
 # artefactos latex
 docs/**/*.aux
@@ -26,3 +35,7 @@ docs/**/*.toc
 # evidencia generada de python
 python/datos/evidencia/
 docs/**/*.vrb
+python/datos/cifar-10-batches-py/
+python/datos/cifar-10-python.tar.gz
+python/datos/pesos_cifar.npz
+python/datos/clases_cifar.npy

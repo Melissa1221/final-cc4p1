@@ -37,8 +37,7 @@
 \title{\vspace{-1cm}\textbf{Sistema Distribuido de Reconocimiento de Objetos\\
 con IA (CNN) y Consenso Raft}\\[2pt]
 \large Examen Final -- CC4P1 Programaci\'on Concurrente y Distribuida}
-\author{Melissa Iman Noriega \and Junior Ortega\\[2pt]
-\small Escuela de Ciencias de la Computaci\'on -- Facultad de Ciencias -- UNI}
+\author{\small Escuela de Ciencias de la Computaci\'on -- Facultad de Ciencias -- UNI}
 \date{2026-I}
 
 \begin{document}
@@ -62,23 +61,25 @@ su entrenamiento distribuido (data-parallel con \texttt{multiprocessing},
 4 \emph{workers}) baja el tiempo de 11.0\,s a 4.7\,s sin perder accuracy.
 \end{abstract}
 
-\section{Datos del proyecto y reparto}
-El sistema tiene tres piezas: un \emph{Servidor de Testeo} en Python que corre la
-CNN sobre las c\'amaras, un \emph{c\'umulo Raft} de tres nodos que mantiene el
-registro replicado, y un \emph{Cliente Vigilante} en Java que consulta ese
-registro. La Tabla~\ref{tab:reparto} resume qui\'en hizo qu\'e.
+\section{Componentes del sistema}
+El sistema tiene tres piezas conectadas por el c\'umulo Raft: un \emph{Servidor de
+Testeo} que corre la CNN sobre las c\'amaras, un \emph{c\'umulo Raft} de tres nodos
+que mantiene el registro replicado, y un \emph{Cliente Vigilante} que consulta ese
+registro. La Tabla~\ref{tab:comp} indica el lenguaje de cada componente.
 
 \begin{table}[h]\centering\small
 \begin{tabular}{@{}lll@{}}
 \toprule
-\textbf{Integrante} & \textbf{Lenguaje} & \textbf{Componentes} \\
+\textbf{Componente} & \textbf{Lenguaje} & \textbf{Funci\'on} \\
 \midrule
-Melissa Iman & Java & N\'ucleo Raft, entrenamiento distribuido, Cliente Vigilante (UI) \\
-Junior Ortega & Go & Nodo Raft, m\'aquina de estado del registro \\
-(parte Python) & Python & CNN desde cero, Servidor de Testeo, nodo Raft \\
+Servidor de Testeo & Python & Corre la CNN sobre las c\'amaras e inserta detecciones \\
+CNN + entrenamiento & Python & Modelo desde cero con NumPy, entrenamiento distribuido \\
+N\'ucleo Raft & Java / Python / Go & Un nodo por lenguaje, mismo protocolo de texto \\
+M\'aquina de estado & Go & Registro replicado de detecciones \\
+Cliente Vigilante & Java & Interfaz que consulta el registro consistente \\
 \bottomrule
 \end{tabular}
-\caption{Reparto del trabajo por lenguaje.}\label{tab:reparto}
+\caption{Componentes del sistema y lenguaje de cada uno.}\label{tab:comp}
 \end{table}
 
 \section{Enunciado y cumplimiento}
@@ -142,7 +143,7 @@ estado (el registro). La Figura~\ref{fig:arq} lo muestra.
   \node[cli,right=12mm of np] (cli) {\textbf{Cliente Vigilante}\\\scriptsize Java (UI)\\\scriptsize LEER\_REGISTRO};
 
   \draw[arr] (c1) -- (srv); \draw[arr] (c2) -- (srv); \draw[arr] (c3) -- (srv);
-  \draw[arr] (srv) -- node[above,sloped,cgray]{\scriptsize NUEVA\_DETECCION} (box.west);
+  \draw[arr] (srv) -- node[above=1pt,cgray,font=\tiny]{NUEVA\_DETECCION} (box.west);
   % replicacion interna
   \draw[arr,<->] (nj) -- (np); \draw[arr,<->] (np) -- (ng);
   \draw[arr,<->] (cli) -- (np);

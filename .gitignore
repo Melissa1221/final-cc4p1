@@ -6,3 +6,12 @@ __pycache__/
 go/**/bin/
 # el jar de FlatLaf SI se versiona (runtime local, sin internet)
 !java/lib/*.jar
+
+# artefactos generados de python
+python/datos/detecciones/
+python/**/__pycache__/
+python/datos/pesos_cnn.npz
+
+# binarios go compilados
+go/nodo-raft
+go/**/gonodo*

@@ -63,10 +63,17 @@ todo corre SIN internet cargando los pesos de disco.
 cd python
 python3 cnn/entrenar_cifar.py 800    # 800 muestras por clase, 10 clases reales
 ```
-Esperado: la accuracy queda alrededor de 40-55% (CNN chica desde cero en NumPy
-sobre 10 clases reales; el azar es 10%). Guarda `datos/pesos_cifar.npz` y
+Esperado: accuracy alrededor de 41% en el test de CIFAR-10 (medido: 40.88% con
+1500 muestras/clase, 30 epocas, ~3 min). El azar con 10 clases es 10%, asi que
+reconoce objetos reales muy por encima del azar. Es honesto: una CNN chica desde
+cero en NumPy no llega al 90% en CIFAR. Guarda `datos/pesos_cifar.npz` y
 `datos/clases_cifar.npy`. La version antigua de figuras geometricas sigue en
 `cnn/entrenar.py` (da ~97%, pero son figuras, no objetos).
+
+Para generar evidencia visual del reconocimiento de objetos reales:
+```bash
+python3 testeo/generar_evidencia_cifar.py   # PNGs en datos/evidencia/cifar_*
+```
 
 ### 1.2 Entrenamiento distribuido (lo que pide el enunciado)
 ```bash

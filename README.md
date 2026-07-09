@@ -13,9 +13,13 @@ La distribucion del trabajo de cada uno esta en [PLANIFICACION.md](PLANIFICACION
 java/        Nodo de entrenamiento + Cliente Vigilante (UI) + nodo Raft  (Melissa)
   src/raft/          nucleo Raft: eleccion, replicacion, commit por mayoria
   src/entrenamiento/ entrenamiento distribuido con hilos + persistencia de pesos
-  src/vigilante/     interfaz Swing + FlatLaf conectada al cluster
-python/      Servidor de Testeo + CNN (NumPy) + nodo Raft                (Andrew)
+  src/vigilante/     interfaz Swing + FlatLaf conectada al cluster (muestra la foto)
+python/      Servidor de Video + Servidor de Testeo + CNN (NumPy) + nodo Raft (Andrew)
+  cnn/               CNN desde cero (figuras + CIFAR-10 objetos reales)
+  video/             Servidor de Video: emite frames por socket a las camaras
+  testeo/            Servidor de Testeo: pide frames al video, reconoce, inserta
 go/          Maquina de estado del registro + nodo Raft                  (Junior)
+mobile/      Cliente Vigilante movil (Android nativo, Kotlin, sockets)
 scripts/     Scripts para levantar cada parte
 docs/        Diagramas, informe y presentacion
 ```
@@ -70,25 +74,33 @@ Mas detalle en [go/README.md](go/README.md).
 La CNN de reconocimiento, el nodo Raft en Python y el Servidor de Testeo estan
 implementados y probados. Todo con la stdlib + NumPy, sin frameworks.
 
-- CNN desde cero con NumPy (5 clases de figuras, ~97% accuracy), con
-  entrenamiento distribuido en varios procesos.
+- CNN desde cero con NumPy que reconoce OBJETOS Y ANIMALES REALES con CIFAR-10
+  (10 clases: avion, auto, pajaro, gato, ciervo, perro, rana, caballo, barco,
+  camion). Entrenamiento distribuido en varios procesos. (La version antigua de
+  figuras geometricas sigue disponible como fallback.)
+- Servidor de Video: emite frames por socket TCP nativo a las camaras.
 - Nodo Raft en Python que habla el mismo protocolo que Java y Go.
-- Servidor de Testeo: usa la CNN, 3 camaras por hilos, inserta al cluster.
+- Servidor de Testeo: pide frames al video, la CNN reconoce, 3 camaras por hilos,
+  guarda un PNG por deteccion e inserta al cluster.
 
 ```bash
 cd python
-python3 cnn/entrenar.py                                          # entrena la CNN
+# descargar CIFAR una vez (ver python/README.md) y entrenar con objetos reales:
+python3 cnn/entrenar_cifar.py 800                               # -> pesos_cifar.npz
+python3 video/servidor_video.py 9500                            # servidor de video
 python3 raft/arrancar.py 2 1:127.0.0.1:9001 2:127.0.0.1:9002 3:127.0.0.1:9003
-python3 testeo/servidor_testeo.py 1:127.0.0.1:9001 2:127.0.0.1:9002 3:127.0.0.1:9003
+python3 testeo/servidor_testeo.py 127.0.0.1:9500 1:127.0.0.1:9001 2:127.0.0.1:9002 3:127.0.0.1:9003
 ```
 
 Mas detalle en [python/README.md](python/README.md).
 
 ## Sistema completo end-to-end (los 3 lenguajes)
 
-`scripts/e2e-completo.sh` levanta un cluster heterogeneo (Java + Python + Go de
-Junior), corre el Servidor de Testeo con la CNN, y verifica que los tres nodos
-replican el registro identico. Incluye prueba de caida del lider.
+`scripts/e2e-completo.sh` levanta el Servidor de Video, un cluster heterogeneo
+(Java + Python + Go de Junior) y el Servidor de Testeo: el video emite frames, el
+testeo los pide por socket, la CNN reconoce e inserta, se guarda un PNG por
+deteccion, y verifica que los tres nodos replican el registro identico. Incluye
+prueba de caida del lider (failover con reeleccion).
 
 ```bash
 ./scripts/e2e-completo.sh
@@ -134,8 +146,17 @@ java -cp java/out:java/lib/flatlaf-3.4.1.jar vigilante.Vigilante \
   1:127.0.0.1:9001 2:127.0.0.1:9002 3:127.0.0.1:9003
 ```
 
-Abre una ventana con la tabla de detecciones (tipo, camara, fecha y hora), un
-titulo, el indicador de conexion y el contador de registros abajo.
+Abre una ventana con la tabla de detecciones (foto, tipo, camara, fecha y hora),
+un titulo, el indicador de conexion y el contador de registros abajo. La columna
+Imagen carga la miniatura del PNG que guardo el Servidor de Testeo por deteccion.
+
+## Cliente Vigilante movil (Android nativo)
+
+Ademas del Vigilante de escritorio (Java), hay un cliente **movil** nativo en
+`mobile/` (Kotlin/Android). Se conecta al cluster por socket TCP con el mismo
+protocolo `LEER_REGISTRO` y muestra el registro de detecciones, refrescando en
+vivo. Reusa el patron de sockets de la PC4. Instrucciones de build en
+[mobile/README.md](mobile/README.md).
 
 ## Por que Swing + FlatLaf
 

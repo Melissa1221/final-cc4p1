@@ -19,8 +19,11 @@ Requisitos (ya los tienes): Java, Python 3 con NumPy, Go.
 
 ## 0. La prueba mas rapida: todo de una
 
-Este script levanta el cluster de los 3 lenguajes, corre la CNN en 3 cámaras,
-inserta al cluster y verifica que los 3 nodos replican lo mismo. Si sale
+Este script levanta el **servidor de video**, el **cluster de los 3 lenguajes** y
+el **servidor de testeo**: el video emite frames por socket, las 3 cámaras del
+testeo los piden, la CNN reconoce objetos reales (CIFAR-10) e inserta al cluster,
+se guarda un PNG por detección, y se verifica que los 3 nodos replican lo mismo.
+Al final mata al líder y confirma reelección con el registro consistente. Si sale
 `E2E COMPLETO OK`, todo funciona.
 
 ```bash
@@ -29,10 +32,15 @@ inserta al cluster y verifica que los 3 nodos replican lo mismo. Si sale
 
 Deberías ver al final:
 ```
-registro tiene 75 detecciones
-entradas aplicadas -> Java:75 Python:75 Go:75
-== E2E COMPLETO OK: cluster de 3 lenguajes + CNN + registro replicado ==
+entradas aplicadas -> Java:24 Python:24 Go:24
+PNG de detecciones guardados: 24
+nuevo lider -> ... soy LIDER en term 2 ...
+== E2E COMPLETO OK: video -> testeo(CNN) -> cluster 3 lenguajes -> registro + PNG, con failover ==
 ```
+
+Nota: si no descargaste CIFAR (ver 1.0), el testeo usa el modelo de figuras como
+fallback y el e2e igual pasa; para reconocer OBJETOS REALES descarga CIFAR y
+entrena con `cnn/entrenar_cifar.py`.
 
 Si eso pasa, el sistema está sano. Abajo está cada parte por separado para la demo.
 
@@ -40,12 +48,25 @@ Si eso pasa, el sistema está sano. Abajo está cada parte por separado para la 
 
 ## 1. Probar la CNN (el reconocimiento)
 
-### 1.1 Entrenar el modelo
+### 1.0 Descargar CIFAR-10 (objetos reales, una sola vez con internet)
+```bash
+cd python && mkdir -p datos && cd datos
+curl -LO https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz
+tar xzf cifar-10-python.tar.gz
+cd ../..
+```
+Son 170MB; queda en `python/datos/cifar-10-batches-py/` (no se versiona). Luego
+todo corre SIN internet cargando los pesos de disco.
+
+### 1.1 Entrenar el modelo con objetos reales (CIFAR-10)
 ```bash
 cd python
-python3 cnn/entrenar.py
+python3 cnn/entrenar_cifar.py 800    # 800 muestras por clase, 10 clases reales
 ```
-Esperado: la accuracy sube hasta ~97% y guarda los pesos en `datos/pesos_cnn.npz`.
+Esperado: la accuracy queda alrededor de 40-55% (CNN chica desde cero en NumPy
+sobre 10 clases reales; el azar es 10%). Guarda `datos/pesos_cifar.npz` y
+`datos/clases_cifar.npy`. La version antigua de figuras geometricas sigue en
+`cnn/entrenar.py` (da ~97%, pero son figuras, no objetos).
 
 ### 1.2 Entrenamiento distribuido (lo que pide el enunciado)
 ```bash
@@ -119,20 +140,36 @@ go run ./cmd/arrancar-nodo 3  1:127.0.0.1:9001 2:127.0.0.1:9002 3:127.0.0.1:9003
 
 En alguna de las 3 verás `*** soy LIDER en term 1 ***`. Ese es el líder.
 
-### Terminal D -- Servidor de Testeo (la CNN reconociendo e insertando)
+### Terminal D -- Servidor de Video (emite frames por socket)
 ```bash
 cd python
-python3 testeo/servidor_testeo.py  1:127.0.0.1:9001 2:127.0.0.1:9002 3:127.0.0.1:9003
+python3 video/servidor_video.py 9500
 ```
-Esperado: 3 cámaras insertan detecciones, con su % de reconocimiento.
+Esperado: `servidor de video escuchando en 127.0.0.1:9500`.
 
-### Terminal E -- Cliente Vigilante (la interfaz Java)
+### Terminal E -- Servidor de Testeo (la CNN reconociendo e insertando)
+```bash
+cd python
+# primer arg: host:puerto del video. Luego los nodos del cluster.
+python3 testeo/servidor_testeo.py 127.0.0.1:9500 \
+  1:127.0.0.1:9001 2:127.0.0.1:9002 3:127.0.0.1:9003
+```
+Esperado: 3 cámaras piden frames al video, reconocen e insertan detecciones, con
+su % de reconocimiento. Cada detección guarda un PNG en `python/datos/detecciones/`.
+
+### Terminal F -- Cliente Vigilante de escritorio (la interfaz Java)
 ```bash
 java -cp java/out:java/lib/flatlaf-3.4.1.jar vigilante.Vigilante \
   1:127.0.0.1:9001 2:127.0.0.1:9002 3:127.0.0.1:9003
 ```
-Abre la ventana con la tabla de detecciones (tipo, cámara, fecha/hora),
-refrescándose en vivo. **Aquí es donde tomas el screenshot del Vigilante.**
+Abre la ventana con la tabla de detecciones (**foto**, tipo, cámara, fecha/hora),
+refrescándose en vivo. La columna Imagen muestra la miniatura del PNG de cada
+detección. **Aquí es donde tomas el screenshot del Vigilante.**
+
+### Cliente Vigilante MOVIL (Android nativo)
+Está en `mobile/` (Kotlin, sockets nativos, mismo protocolo `LEER_REGISTRO`).
+Se compila con Android Studio o `./gradlew assembleDebug` (necesita el Android
+SDK). Ver `mobile/README.md`. En el emulador el host se ve como `10.0.2.2`.
 
 ### Demostrar tolerancia a fallos (el punto fuerte)
 Con todo corriendo, ve a la terminal del **líder** y córtalo con `Ctrl+C`.
@@ -174,9 +211,10 @@ Linux y el resto en otro SO. Java y Python son directos; Go se compila por SO
 ## 5. Checklist antes de presentar
 
 - [ ] `./scripts/e2e-completo.sh` termina en `E2E COMPLETO OK`.
-- [ ] La CNN entrena y da ~97% (`python3 cnn/entrenar.py`).
-- [ ] Tienes las imágenes de evidencia (`python3 testeo/generar_evidencia.py`).
-- [ ] Screenshot del Vigilante en vivo tomado (para las slides).
+- [ ] CIFAR descargado y la CNN entrenada con objetos reales (`cnn/entrenar_cifar.py`).
+- [ ] El servidor de video emite frames y el testeo los consume.
+- [ ] Screenshot del Vigilante en vivo tomado, con la columna de foto (para las slides).
+- [ ] Cliente movil (mobile/) compilado o al menos el codigo revisado.
 - [ ] Probaste el failover: matar el líder y ver la reelección.
 - [ ] (Para la nota completa) probado en 2 PCs reales por LAN.
 - [ ] PDF informe y PDF presentación listos (en `docs/`).

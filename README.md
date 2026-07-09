@@ -54,22 +54,13 @@ formato para que sus nodos interoperen con los de Java.
 
 ## Parte de Go (ya funciona end-to-end)
 
-El nucleo Raft y la maquina de estado del registro ya estan implementados y
+El nucleo Raft y la maquina de estado del registro (Junior) estan implementados y
 probados, con el mismo protocolo de texto que Java. Sockets TCP crudos
 (`net.Listen` / `net.Dial`) y goroutines, sin frameworks.
 
-Probar el nucleo Raft de una (3 nodos Go en un proceso, igual que
-`raft.PruebaE2E` en Java):
-
 ```bash
-cd go && go run ./cmd/prueba-e2e
-```
-
-Levantar un nodo Go suelto (interopera con nodos Java o Python en la misma
-lista de cluster):
-
-```bash
-cd go && go run ./cmd/arrancar-nodo <miId> <id:host:puerto> ...
+cd go && go run ./cmd/prueba-e2e                                 # prueba del nucleo
+cd go && go run ./cmd/arrancar-nodo <miId> <id:host:puerto> ...  # un nodo suelto
 ```
 
 Mas detalle en [go/README.md](go/README.md).

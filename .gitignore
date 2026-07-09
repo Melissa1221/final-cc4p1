@@ -35,3 +35,7 @@ docs/**/*.toc
 # evidencia generada de python
 python/datos/evidencia/
 docs/**/*.vrb
+python/datos/cifar-10-batches-py/
+python/datos/cifar-10-python.tar.gz
+python/datos/pesos_cifar.npz
+python/datos/clases_cifar.npy

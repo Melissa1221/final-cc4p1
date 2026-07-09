@@ -39,12 +39,24 @@ Cada uno abre una terminal en la carpeta del repo:
 cd .../final/repo-setup
 ```
 
-Melissa, ademas, entrena la CNN una vez si no hay pesos (necesita el dataset CIFAR
-descargado; ver python/README.md):
+**IMPORTANTE — solo Melissa necesita el dataset y el modelo.** Andrew y Junior solo
+levantan su nodo (el nodo Raft NO usa la CNN ni CIFAR, solo hace consenso). Andrew
+y Junior NO descargan CIFAR ni entrenan nada.
+
+Melissa (una sola vez): descarga el dataset y entrena. Desde `python/`:
 
 ```bash
-cd python && python3 cnn/entrenar_cifar.py 800 && cd ..
+cd python
+mkdir -p datos && cd datos
+curl -LO https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz
+tar xzf cifar-10-python.tar.gz
+cd ..
+python3 cnn/entrenar_cifar.py 800
+cd ..
 ```
+
+Si Andrew o Junior ven el error "no encuentro datos/cifar-10-batches-py", es porque
+intentaron entrenar: NO tienen que entrenar, solo levantar su nodo (paso 1).
 
 ---
 

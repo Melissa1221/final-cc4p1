@@ -1,0 +1,4 @@
+<resources>
+    <!-- tema base de Material, sin barra de accion propia -->
+    <style name="Theme.VigilanteMovil" parent="Theme.Material3.DayNight.NoActionBar" />
+</resources>

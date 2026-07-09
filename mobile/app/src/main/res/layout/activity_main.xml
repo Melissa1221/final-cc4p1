@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="vertical"
+    android:padding="16dp">
+
+    <TextView
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Vigilante movil"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:paddingBottom="8dp" />
+
+    <EditText
+        android:id="@+id/txtNodos"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:hint="1:host:9911, 2:host:9912, 3:host:9913"
+        android:inputType="text" />
+
+    <Button
+        android:id="@+id/btnConectar"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="Conectar al cluster" />
+
+    <TextView
+        android:id="@+id/txtEstado"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:text="sin conectar"
+        android:paddingTop="8dp"
+        android:paddingBottom="8dp"
+        android:textColor="#6B7280" />
+
+    <androidx.recyclerview.widget.RecyclerView
+        android:id="@+id/listaDetecciones"
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1" />
+
+</LinearLayout>

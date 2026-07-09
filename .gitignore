@@ -17,6 +17,14 @@ python/**/__pycache__/
 go/nodo-raft
 go/**/gonodo*
 
+# artefactos de build del cliente movil (android/gradle)
+mobile/.gradle/
+mobile/build/
+mobile/app/build/
+mobile/local.properties
+mobile/.idea/
+mobile/**/*.apk
+
 # artefactos latex
 docs/**/*.aux
 docs/**/*.log

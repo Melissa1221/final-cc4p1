@@ -114,14 +114,16 @@ def main():
                         (150, 150, 150), 2)
         cv2.imshow("Camara %d - Servidor de Testeo" % id_cam, frame)
 
-        # insertar al cluster cada 2 segundos
+        # insertar al cluster automaticamente cada 3 segundos
         ahora = time.time()
-        if ahora - ultimo >= 2.0:
+        if ahora - ultimo >= 3.0:
             ultimo = ahora
-            # guardar el frame 32x32 anotado como PNG (lo que ve el Vigilante)
+            # guardar el frame 32x32 como PNG (ruta ABSOLUTA para que el Vigilante
+            # lo encuentre corra desde donde corra) e insertar al cluster.
             x32 = x[0]                              # (3,32,32)
             fecha = time.strftime("%d/%m/%Y %H:%M:%S")
-            ref = "datos/detecciones/cam%d_%04d_%s.png" % (id_cam, insertadas + 1, tipo)
+            ref = os.path.abspath(
+                "datos/detecciones/cam%d_%04d_%s.png" % (id_cam, insertadas + 1, tipo))
             guardar_png(x32, tipo, "Camara %d" % id_cam, ref)
             if cluster.insertar(tipo, ref, fecha, "Camara %d" % id_cam):
                 insertadas += 1

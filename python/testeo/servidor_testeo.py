@@ -59,7 +59,9 @@ class ServidorTesteo:
         with self._lock:
             self._contador += 1
             n = self._contador
-        return "%s/det_%04d_%s_%s.png" % (self.carpeta_img, n, tipo, camara)
+        # ruta absoluta para que el Vigilante la encuentre corra desde donde corra
+        return os.path.abspath(
+            "%s/det_%04d_%s_%s.png" % (self.carpeta_img, n, tipo, camara))
 
     def _guardar_imagen(self, img, tipo, camara):
         # guarda un PNG real de la deteccion (lo muestra el Vigilante).

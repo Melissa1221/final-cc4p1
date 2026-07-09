@@ -84,7 +84,8 @@ def main():
         if ahora - ultimo >= 2.0:
             ultimo = ahora
             fecha = time.strftime("%d/%m/%Y %H:%M:%S")
-            ref = "datos/detecciones/demo_cam%d_%04d_%s.png" % (id_cam, insertadas + 1, tipo)
+            ref = os.path.abspath(
+                "datos/detecciones/demo_cam%d_%04d_%s.png" % (id_cam, insertadas + 1, tipo))
             guardar_png(img, tipo, "Camara %d" % id_cam, ref)
             if cluster.insertar(tipo, ref, fecha, "Camara %d" % id_cam):
                 insertadas += 1

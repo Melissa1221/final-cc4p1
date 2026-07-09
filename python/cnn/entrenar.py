@@ -1,6 +1,7 @@
 # Entrena la CNN y reporta accuracy. Este es el entrenamiento de referencia
 # (un solo proceso). El entrenamiento DISTRIBUIDO esta en entrenar_distribuido.py.
 
+import os
 import sys
 import time
 import numpy as np
@@ -46,5 +47,6 @@ def entrenar(epocas=20, lr=0.08, batch=32, por_clase=600, semilla=0, verbose=Tru
 
 if __name__ == "__main__":
     red, acc = entrenar()
+    os.makedirs("datos", exist_ok=True)  # crea la carpeta si no existe (clon limpio)
     red.guardar("datos/pesos_cnn.npz")
     print("pesos guardados en datos/pesos_cnn.npz")

@@ -13,6 +13,7 @@
 # pesos actuales, y devuelve los gradientes de su shard. El proceso principal los
 # promedia y aplica la actualizacion.
 
+import os
 import sys
 import time
 import numpy as np
@@ -155,6 +156,7 @@ def entrenar_distribuido(num_workers=4, epocas=20, lr=0.08, batch=64,
 
     acc = (red.predecir(Xte) == yte).mean()
     print(f"\ndistribuido: {dur:.1f}s, accuracy final = {acc*100:.2f}%")
+    os.makedirs("datos", exist_ok=True)  # crea la carpeta si no existe (clon limpio)
     red.guardar("datos/pesos_cnn.npz")
     print("pesos guardados en datos/pesos_cnn.npz")
     return red, acc

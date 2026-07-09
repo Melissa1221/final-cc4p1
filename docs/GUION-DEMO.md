@@ -24,14 +24,19 @@ integrante tiene su rol. Tiempo total: ~5-7 minutos.
 - Mac: `ipconfig getifaddr en0`
 - Windows: `ipconfig` (busca "IPv4" de la WiFi)
 
-Anoten las 3 IP y acuerden esta lista (cambien las IP por las reales):
+Anoten las 3 IP y acuerden esta lista (cambien las IP por las reales de cada laptop):
 
 ```
-1:IP_MELISSA:9001 2:IP_ANDREW:9002 3:IP_JUNIOR:9003
+1:192.168.1.108:9001 2:IP_ANDREW:9002 3:IP_JUNIOR:9003
 ```
 
-**Todos usan la MISMA lista.** Solo cambia el numero de nodo (1, 2, 3) al inicio
-de su comando. En este guion la escribimos como `LISTA`.
+**Todos usan la MISMA lista** (los tres `id:host:puerto`), solo cambia el numero de
+nodo (1, 2, 3) al inicio de su comando.
+
+> IMPORTANTE: en los comandos de abajo, donde dice esa lista de nodos, va la lista
+> COMPLETA con las IP reales. NO escribas la palabra "LISTA" literal (da
+> `NumberFormatException`). Si estas probando SOLO en tu laptop (los 3 nodos en tu
+> maquina), usa `1:127.0.0.1:9001 2:127.0.0.1:9002 3:127.0.0.1:9003`.
 
 Cada uno abre una terminal en la carpeta del repo:
 
@@ -77,19 +82,19 @@ Cada uno en SU laptop, en SU terminal:
 **Melissa (Laptop 1, Java):**
 ```bash
 cd java && javac -cp lib/flatlaf-3.4.1.jar -d out src/raft/*.java
-java -cp out raft.ArrancarNodo 1 LISTA
+java -cp out raft.ArrancarNodo 1 1:192.168.1.108:9001 2:IP_ANDREW:9002 3:IP_JUNIOR:9003
 ```
 
 **Andrew (Laptop 2, Python):**
 ```bash
 cd python
-python3 raft/arrancar.py 2 LISTA
+python3 raft/arrancar.py 2 1:192.168.1.108:9001 2:IP_ANDREW:9002 3:IP_JUNIOR:9003
 ```
 
 **Junior (Laptop 3, Go):**
 ```bash
 cd go
-go run ./cmd/arrancar-nodo 3 LISTA
+go run ./cmd/arrancar-nodo 3 1:192.168.1.108:9001 2:IP_ANDREW:9002 3:IP_JUNIOR:9003
 ```
 
 En una de las 3 terminales aparecera `*** soy LIDER en term 1 ***`. **Ese es el
@@ -119,7 +124,7 @@ Dos opciones. Elige UNA:
 
 ```bash
 cd python
-python3 testeo/camara_real.py 1 LISTA
+python3 testeo/camara_real.py 1 1:192.168.1.108:9001 2:IP_ANDREW:9002 3:IP_JUNIOR:9003
 ```
 
 Muestrale FOTOS REALES (no dibujos) de las clases que mejor reconoce: **auto,
@@ -130,7 +135,7 @@ reconoce correcto. Usa esta si la webcam falla o para ir a la segura.
 
 ```bash
 cd python
-python3 testeo/camara_demo.py 1 LISTA
+python3 testeo/camara_demo.py 1 1:192.168.1.108:9001 2:IP_ANDREW:9002 3:IP_JUNIOR:9003
 ```
 
 Sea cual sea, vas a ver una ventana "Camara 1" con "Detecto: X" y cada deteccion
@@ -142,7 +147,7 @@ se inserta al cluster.
 
 **Desktop:**
 ```bash
-./scripts/correr-vigilante.sh LISTA
+./scripts/correr-vigilante.sh 1:192.168.1.108:9001 2:IP_ANDREW:9002 3:IP_JUNIOR:9003
 ```
 
 Abre la ventana con el registro: foto, tipo, camara, fecha/hora, refrescandose en

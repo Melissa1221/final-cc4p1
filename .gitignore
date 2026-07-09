@@ -15,3 +15,14 @@ python/datos/pesos_cnn.npz
 # binarios go compilados
 go/nodo-raft
 go/**/gonodo*
+
+# artefactos latex
+docs/**/*.aux
+docs/**/*.log
+docs/**/*.nav
+docs/**/*.out
+docs/**/*.snm
+docs/**/*.toc
+# evidencia generada de python
+python/datos/evidencia/
+docs/**/*.vrb

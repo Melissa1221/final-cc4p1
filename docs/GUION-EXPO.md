@@ -1,126 +1,136 @@
-# Guion de exposicion (12-15 min, por diapositiva)
+# Presentation script (English, per slide, 12-15 min)
 
-Presentacion en ingles (slides.pdf, 15 diapositivas). Reparto entre los 3, con lo
-que dice cada uno y el tiempo aproximado. La demo en vivo va al final (slides
-9-13). Total: ~13 min de expo + ~4 min de demo.
+The talk is in English (slides.pdf, 15 slides). Balanced across the three of us:
+each person presents their own language and the part they built. The live demo is
+at the end (slides 9-13), done by all three.
 
-## Reparto general
+## Overall split (balanced)
 
-| Bloque | Slides | Quien |
-|---|---|---|
-| Intro + problema + arquitectura | 1-5 | Melissa |
-| Raft (consenso) + protocolo | 6-7 | Junior |
-| Modelo de IA (CNN) | 8 | Andrew |
-| Resultados + demo en vivo | 9-13 | los 3 (Melissa conduce) |
-| Cierre | 14-15 | Melissa |
+| Person | Language | Slides | Their part |
+|---|---|---|---|
+| Melissa | Java | 1-5 | Intro, problem, architecture, Java node + Watcher UI |
+| Junior | Go | 6-7, 10 | Raft consensus, protocol, failover (Go node + state machine) |
+| Andrew | Python | 8, 11 | CNN + testing server (Python node) |
+| All three | -- | 9, 12-13 | Live demo (each runs their node) |
+| Melissa | -- | 14-15 | Closing |
+
+Each person talks for a similar amount of time (~4 min each of speaking).
 
 ---
 
-## Slide 1 — Portada (Melissa, 20 seg)
-"Buenas, somos Melissa, Junior y Andrew. Nuestro proyecto es un sistema distribuido
-de reconocimiento de objetos con IA y el algoritmo de consenso Raft, para el curso
-de Concurrente y Distribuida."
+## Slide 1 — Title (Melissa, 20 s)
+"Hi, we are Melissa, Junior and Andrew. Our final project is a distributed
+object-recognition system that uses an AI model and the Raft consensus algorithm.
+Each of us built one node in a different language."
 
 ## Slide 2 — The problem (Melissa, 1 min)
-"El objetivo es reconocer objetos, animales o personas con un modelo de IA
-entrenado, y que todo el registro sea consistente y tolerante a fallos usando Raft.
-El sistema tiene cuatro partes: servidor de entrenamiento, servidor de testeo con
-las camaras, el cliente vigilante, y el modulo de consenso."
+"The goal is to recognize objects, animals or people with a trained AI model, and
+to keep the whole detection log consistent and fault-tolerant using Raft. The
+system has four parts: a training server, a testing server with the cameras, a
+watcher client, and the Raft consensus module."
 
 ## Slide 3 — Hard constraints (Melissa, 1 min)
-"El profe puso reglas estrictas: solo sockets nativos, nada de websocket, MQ ni
-frameworks, asi que Raft lo implementamos a mano sobre TCP. Tres lenguajes, uno por
-integrante. Dos sistemas operativos. Hilos. Despliegue local sin internet. Y solo
-librerias base, con NumPy permitido para la red neuronal."
+"The assignment had strict rules: raw native sockets only, no WebSocket, no MQ, no
+frameworks, so we implemented Raft by hand over TCP. Three languages, one per
+member. Two operating systems. Threads. Local deployment, no internet. And only
+the base libraries of each language, with NumPy allowed for the neural network."
 
-## Slide 4 — Team and languages (Melissa, 40 seg)
-"Cada uno tomo un lenguaje: yo Java con el nucleo de Raft, el entrenamiento y la
-interfaz; Junior Go con su nodo Raft y la maquina de estado del registro; y Andrew
-Python con la CNN y el servidor de testeo. Lo clave: los tres nodos hablan el mismo
-protocolo de texto, asi que forman un solo cluster aunque sean lenguajes distintos."
+## Slide 4 — Team and languages (Melissa, 40 s)
+"Each of us owns a language: I did Java, with the Raft core, the training and the
+desktop interface. Junior did Go, with his Raft node and the record state machine.
+Andrew did Python, with the CNN and the testing server. The key point: all three
+nodes speak the same text protocol, so they form a single cluster even though they
+are different languages."
 
 ## Slide 5 — System architecture (Melissa, 1 min)
-"Este es el flujo: las camaras alimentan al servidor de testeo, que corre la CNN.
-Cada deteccion se manda al lider del cluster Raft, que la replica en los tres nodos.
-El cliente vigilante lee ese registro replicado. Toda escritura pasa por el lider y
-se confirma cuando la mayoria la copio."
--> Aqui Melissa pasa la palabra a Junior.
+"This is the flow: the cameras feed the testing server, which runs the CNN. Each
+detection is sent to the leader of the Raft cluster, which replicates it across the
+three nodes. The watcher client reads that replicated log. Every write goes through
+the leader and is committed once the majority has copied it."
+-> Melissa hands over to Junior.
 
 ## Slide 6 — Raft: leader election and log replication (Junior, 2 min)
-"Raft resuelve como varias maquinas se ponen de acuerdo aunque una falle. Hay tres
-estados: seguidor, candidato y lider. Se elige lider con un timeout aleatorio de
-150 a 300 ms para evitar empates. El lider recibe cada deteccion, la mete en su log
-y la replica; una entrada se confirma solo cuando esta en la mayoria. Si el lider
-cae, los otros reeligen uno nuevo. Implementamos esto a mano, siguiendo el paper de
-Raft que vimos en clase."
+"I built the Go node and the consensus logic, so let me explain Raft. Raft is how
+several machines agree even if one fails. There are three states: follower,
+candidate and leader. A leader is elected using a random timeout between 150 and
+300 milliseconds to avoid ties. The leader takes each detection, puts it in its
+log and replicates it; an entry is committed only when it is on the majority. If
+the leader dies, the others elect a new one. We implemented all of this by hand,
+following the Raft paper from class."
 
 ## Slide 7 — The text protocol (Junior, 1.5 min)
-"Todo va por este protocolo de texto, una linea por mensaje con campos separados
-por barra. RequestVote y AppendEntries para el consenso; NUEVA_DETECCION para
-insertar; LEER_REGISTRO para que el vigilante lea. Como Java, Python y Go usan
-exactamente este formato, un lider Python puede replicar en un seguidor Java o Go
-sin ninguna traduccion."
--> Junior pasa la palabra a Andrew.
+"Everything runs over this text protocol, one message per line with fields split by
+a pipe. RequestVote and AppendEntries for the consensus; NUEVA_DETECCION to insert
+a detection; LEER_REGISTRO for the watcher to read. Because Java, Python and Go all
+use exactly this format, a Python leader can replicate to a Java or Go follower with
+no translation layer at all. My Go node interoperates with the other two directly."
+-> Junior hands over to Andrew.
 
-## Slide 8 — The CNN (Andrew, 2 min)
-"La IA es una red convolucional que escribimos desde cero con NumPy, sin
-TensorFlow ni PyTorch. Reconoce 10 clases reales de CIFAR-10: avion, auto, gato,
-perro, barco, camion, etc. Tiene dos capas convolucionales, pooling y una capa
-densa con softmax, con forward y backward implementados a mano. La entrenamos antes
-y guardamos los pesos, asi corre sin internet. Da 40.9% en el test, que para una
-red chica hecha a mano sobre objetos reales es cuatro veces mejor que el azar.
-Ademas el entrenamiento es distribuido: repartimos la carga entre varios procesos
-en paralelo."
--> Andrew pasa la palabra a Melissa para la demo.
+## Slide 8 — The CNN (Andrew, 2.5 min)
+"I built the AI part in Python. It is a convolutional neural network written from
+scratch with NumPy, no TensorFlow or PyTorch. It recognizes 10 real classes from
+CIFAR-10: airplane, car, cat, dog, boat, truck, and so on. It has two convolutional
+layers, pooling, and a dense layer with softmax, with forward and backward
+propagation implemented by hand. We train it beforehand and save the weights, so it
+runs offline. It gets 40.9% on the test set, which for a small from-scratch network
+on real objects is four times better than random. The training is also distributed:
+we split the load across several processes in parallel."
+-> Andrew hands over to Melissa to start the demo.
 
-## Slides 9-13 — Resultados y DEMO EN VIVO (los 3, Melissa conduce, ~4 min)
+## Slides 9-13 — Results and LIVE DEMO (all three, ~4 min)
 
-Aqui NO solo leen las slides: hacen la demo real. Melissa conduce y va mostrando.
+Here we do not just read the slides: we run the real demo. Each of us runs our own
+node, so the three languages are visible.
 
-**Slide 9 (End-to-end) + Slide 10 (Fault tolerance):** mientras se levantan los nodos.
-"Vamos a mostrarlo corriendo. Cada uno levanta su nodo." (los 3 corren su comando
-del GUION-DEMO). "Ya eligieron lider. Ahora el servidor de video y la camara..."
+**Slide 9 (End-to-end):** while the nodes come up.
+"Let's show it running. Each of us starts our node." (the three run their command
+from GUION-DEMO.md: Melissa the Java node, Andrew the Python node, Junior the Go
+node.) "A leader has been elected. Now the video server and the camera..."
 
-**Slide 11 (Recognition) + Slide 12 (Watcher desktop):**
-"La camara reconoce los objetos en vivo y cada deteccion aparece aca en el vigilante,
-con su foto, tipo, camara y hora." (mostrar el Vigilante con las detecciones).
+**Slide 11 (Recognition) — Andrew talks:** "The camera recognizes the objects live,
+and each detection is inserted into the cluster." (show the camera window with
+"Detecto: X"). The phone can act as an IP camera here.
 
-**Slide 13 (Mobile):** "Y el mismo registro se ve desde la app movil." (mostrar el
-movil o el emulador).
+**Slide 12 (Watcher desktop) — Melissa talks:** "Each detection shows up here in the
+watcher, with its photo, type, camera and time." (show the desktop Watcher).
 
-**El momento estrella (failover):** "Ahora matamos el nodo lider..." (el del lider
-corta con Ctrl+C). "...y vean: otro nodo es reelegido lider y el registro sigue
-intacto. Eso es la tolerancia a fallos del consenso Raft, funcionando entre tres
-maquinas distintas."
+**Slide 13 (Mobile) — Andrew or Melissa:** "And the same log is visible from the
+native Android app." (show the phone or emulator).
 
-## Slide 14 — (parte del cierre, Melissa, 30 seg)
-"En resumen: cumplimos las tres partes: reconocimiento con IA entrenada, consenso
-Raft tolerante a fallos, y tres lenguajes interoperando solo con sockets nativos."
+**Slide 10 (Fault tolerance) — Junior talks, the star moment:** "Now we kill the
+leader node..." (whoever is the leader presses Ctrl+C). "...and look: another node
+is elected leader and the log stays intact. That is the fault tolerance of Raft
+consensus, working across three separate machines."
 
-## Slide 15 — Thank you (Melissa, 15 seg)
-"Gracias, quedamos atentos a sus preguntas."
+## Slide 14 — (closing, Melissa, 30 s)
+"To sum up, we met the three parts: recognition with a trained AI, fault-tolerant
+Raft consensus, and three languages interoperating with raw native sockets only."
+
+## Slide 15 — Thank you (Melissa, 15 s)
+"Thank you, we are happy to take questions."
 
 ---
 
-## Reglas para que salga bien
+## Rules so it goes well
 
-- **Ensayen la demo una vez antes.** Que cada uno sepa su comando de memoria
-  (ver docs/GUION-DEMO.md).
-- **Melissa conduce la demo** (tiene la camara, el video y el vigilante). Junior y
-  Andrew solo levantan su nodo y, en el momento del failover, el que sea lider corta.
-- Si la demo falla en vivo: usar el modo seguro (`camara_demo.py`) o correr los 3
-  nodos en una sola laptop con `127.0.0.1`. Nunca se queden en blanco: tienen los
-  slides de respaldo.
-- **Tiempo:** si van cortos, la demo se recorta a: levantar nodos -> mostrar
-  vigilante con detecciones -> matar lider. Eso es lo que mas evalua el profe.
+- **Rehearse the demo once.** Everyone should know their command by heart
+  (see docs/GUION-DEMO.md).
+- **Each person runs their own node** in the demo, so the three languages are shown.
+  Melissa also runs the camera, video server and watcher.
+- If the demo fails live: use the safe mode (`camara_demo.py`) or run the three
+  nodes on one laptop with `127.0.0.1`. Never freeze: the slides are the backup.
+- **Timing:** if short on time, the demo shrinks to: start nodes -> show watcher with
+  detections -> kill leader. That is what the professor grades the most.
 
-## Posibles preguntas del profe y como responder
+## Likely questions and how to answer (in English)
 
-- "Por que solo 40.9%?" -> "Es una CNN chica hecha a mano en NumPy sobre CIFAR-10,
-  sin frameworks ni pre-entrenamiento. 40.9% es honesto; el azar es 10%."
-- "Como se que no usaron frameworks?" -> mostrar el codigo del socket crudo y el
-  protocolo de texto.
-- "Y si caen dos nodos?" -> "Con 3 nodos, Raft tolera 1 caida (mayoria de 2). Con 5
-  nodos toleraria 2. Es configurable."
-- "Corre en dos sistemas operativos?" -> "Si, los nodos escuchan en 0.0.0.0; en la
-  demo corren en Mac y Windows/Linux."
+- "Why only 40.9%?" -> "It is a small CNN written by hand in NumPy on CIFAR-10, no
+  frameworks and no pre-training. 40.9% is honest; random is 10%."
+- "How do I know you didn't use frameworks?" -> show the raw socket code and the
+  text protocol.
+- "What if two nodes go down?" -> "With 3 nodes, Raft tolerates 1 failure (majority
+  of 2). With 5 nodes it would tolerate 2. It is configurable."
+- "Does it run on two operating systems?" -> "Yes, the nodes listen on 0.0.0.0; in
+  the demo they run on Mac and Windows/Linux."
+- "Are the cameras real?" -> "Yes, a phone acts as an IP camera streaming over WiFi;
+  the laptop reads the stream and the CNN recognizes it."

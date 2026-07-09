@@ -65,11 +65,11 @@ class ServidorTesteo:
 
     def _guardar_imagen(self, img, tipo, camara):
         # guarda un PNG real de la deteccion (lo muestra el Vigilante).
+        # _nombre_png ya devuelve ruta ABSOLUTA, asi que el Vigilante la encuentra
+        # corra desde donde corra. No hay que anteponer nada.
         ruta = self._nombre_png(tipo, camara)
         guardar_png(img, tipo, camara, ruta)
-        # la ruta que va al registro es relativa a la raiz del repo, para que el
-        # Vigilante (que corre desde la raiz) pueda abrir el PNG.
-        return "python/" + ruta
+        return ruta
 
     def _camara(self, id_camara, num_frames):
         # cada camara pide sus frames al servidor de video y va insertando.

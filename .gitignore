@@ -11,3 +11,7 @@ go/**/bin/
 python/datos/detecciones/
 python/**/__pycache__/
 python/datos/pesos_cnn.npz
+
+# binarios go compilados
+go/nodo-raft
+go/**/gonodo*

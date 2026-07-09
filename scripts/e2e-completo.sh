@@ -88,16 +88,32 @@ echo "   PNG de detecciones guardados: $NPNG"
 if [ "$NPNG" -lt 1 ]; then echo "   ERROR: no se guardaron imagenes"; exit 1; fi
 
 echo "== 7. failover: matar al lider y confirmar reeleccion + registro consistente =="
-# identifico y mato al lider actual (por su archivo de log)
-PID_LIDER=""
-if grep -q "soy LIDER" /tmp/e2e_j1.log; then PID_LIDER=$(pgrep -f "raft.ArrancarNodo 1"); QUIEN="Java(1)"; fi
-if grep -q "soy LIDER" /tmp/e2e_p2.log; then PID_LIDER=$(pgrep -f "raft/arrancar.py 2"); QUIEN="Python(2)"; fi
-if grep -q "soy LIDER" /tmp/e2e_g3.log; then PID_LIDER=$(pgrep -f "gonodo_e2e 3"); QUIEN="Go(3)"; fi
+# identifico y mato al lider actual (por su archivo de log). Guardo cuales logs
+# quedan vivos para buscar el NUEVO lider solo entre esos.
+PID_LIDER=""; QUIEN=""; VIVOS=""
+if grep -q "soy LIDER" /tmp/e2e_j1.log; then
+  PID_LIDER=$(pgrep -f "raft.ArrancarNodo 1"); QUIEN="Java(1)"; VIVOS="/tmp/e2e_p2.log /tmp/e2e_g3.log"
+elif grep -q "soy LIDER" /tmp/e2e_p2.log; then
+  PID_LIDER=$(pgrep -f "raft/arrancar.py 2"); QUIEN="Python(2)"; VIVOS="/tmp/e2e_j1.log /tmp/e2e_g3.log"
+elif grep -q "soy LIDER" /tmp/e2e_g3.log; then
+  PID_LIDER=$(pgrep -f "gonodo_e2e 3"); QUIEN="Go(3)"; VIVOS="/tmp/e2e_j1.log /tmp/e2e_p2.log"
+fi
+# cuento cuantos "soy LIDER" hay en los logs vivos ANTES de matar, para detectar
+# solo los NUEVOS que aparezcan despues (la reeleccion real).
+ANTES=$(grep -h "soy LIDER" $VIVOS 2>/dev/null | wc -l | tr -d ' ')
 echo "   matando al lider $QUIEN (pid $PID_LIDER)"
 kill $PID_LIDER 2>/dev/null || true
-sleep 4
-NUEVO=$(grep -h "soy LIDER" /tmp/e2e_j1.log /tmp/e2e_p2.log /tmp/e2e_g3.log | tail -1)
-echo "   nuevo lider -> $NUEVO"
+# espero la reeleccion: un "soy LIDER" NUEVO en un log vivo (no el que mate)
+NUEVO=""
+for intento in 1 2 3 4 5 6 7 8 9 10; do
+  sleep 2
+  AHORA=$(grep -h "soy LIDER" $VIVOS 2>/dev/null | wc -l | tr -d ' ')
+  if [ "$AHORA" -gt "$ANTES" ]; then
+    NUEVO=$(grep -h "soy LIDER" $VIVOS 2>/dev/null | tail -1)
+    break
+  fi
+done
+echo "   nuevo lider -> ${NUEVO:-(no detectado, revisar)}"
 # el registro debe seguir accesible y con las mismas detecciones
 (cd python && python3 -c "
 import sys; sys.path.insert(0,'.')

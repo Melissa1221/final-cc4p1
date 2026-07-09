@@ -58,8 +58,12 @@ def hoja_contacto(frames, tipos, camaras, ruta, cols=5):
         ax = axes[i]
         ax.set_xticks([]); ax.set_yticks([])
         if i < n:
-            img = frames[i][0] if frames[i].ndim == 3 else frames[i]
-            ax.imshow(img, cmap="gray_r", vmin=0, vmax=1)
+            # RGB (3,H,W) -> a color; gris (1,H,W) o (H,W) -> escala de grises
+            img, es_gris = _a_imagen(frames[i])
+            if es_gris:
+                ax.imshow(img, cmap="gray_r", vmin=0, vmax=1)
+            else:
+                ax.imshow(np.clip(img, 0, 1))
             for spine in ax.spines.values():
                 spine.set_edgecolor("#f47216"); spine.set_linewidth(2)
             ax.set_title(f"{tipos[i]}", color="#2a9d4e", fontsize=9, fontweight="bold")

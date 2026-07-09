@@ -37,7 +37,8 @@
 \title{\vspace{-1cm}\textbf{Sistema Distribuido de Reconocimiento de Objetos\\
 con IA (CNN) y Consenso Raft}\\[2pt]
 \large Examen Final -- CC4P1 Programaci\'on Concurrente y Distribuida}
-\author{\small Escuela de Ciencias de la Computaci\'on -- Facultad de Ciencias -- UNI}
+\author{Melissa Iman Noriega \and Junior Ortega \and Andrew Inga\\[3pt]
+\small Escuela de Ciencias de la Computaci\'on -- Facultad de Ciencias -- UNI}
 \date{2026-I}
 
 \begin{document}
@@ -45,20 +46,22 @@ con IA (CNN) y Consenso Raft}\\[2pt]
 \thispagestyle{fancy}
 
 \begin{abstract}
-\noindent Construimos un sistema distribuido que reconoce figuras en tres
-c\'amaras con una \textbf{CNN escrita desde cero en NumPy} y guarda cada
-detecci\'on en un \textbf{registro replicado con Raft}. El c\'umulo es
-heterog\'eneo: un nodo en \textbf{Java}, uno en \textbf{Python} y uno en
-\textbf{Go}, cada uno con su implementaci\'on de Raft hablando el mismo
+\noindent Construimos un sistema distribuido que reconoce objetos y animales
+reales en tres c\'amaras con una \textbf{CNN escrita desde cero en NumPy} y guarda
+cada detecci\'on (con su foto) en un \textbf{registro replicado con Raft}. El
+c\'umulo es heterog\'eneo: un nodo en \textbf{Java}, uno en \textbf{Python} y uno
+en \textbf{Go}, cada uno con su implementaci\'on de Raft hablando el mismo
 protocolo de texto sobre \textbf{sockets TCP nativos}. No usamos frameworks de
 mensajer\'ia ni librer\'ias de red de terceros: solo la biblioteca base de cada
-lenguaje (NumPy se permite para la CNN). El c\'umulo elige l\'ider, la CNN
-clasifica en las 3 c\'amaras (un hilo por c\'amara) con 88--100\% de acierto por
-c\'amara, y los tres nodos aplican las mismas 75 detecciones en el mismo orden.
-Probamos el failover matando al l\'ider (Python): Go es reelegido en el siguiente
-\emph{term} y el registro sobrevive consistente. La CNN alcanza 97.2\% en test y
-su entrenamiento distribuido (data-parallel con \texttt{multiprocessing},
-4 \emph{workers}) baja el tiempo de 11.0\,s a 4.7\,s sin perder accuracy.
+lenguaje (NumPy se permite para la CNN). Un servidor de video emite los frames,
+el Servidor de Testeo los reconoce con la CNN (10 clases reales de CIFAR-10) e
+inserta al c\'umulo, y los tres nodos aplican las mismas detecciones en el mismo
+orden. El registro se consulta desde un Cliente Vigilante de escritorio (Java) y
+uno m\'ovil (Android nativo). Probamos el failover matando al l\'ider (Python):
+Go es reelegido en el siguiente \emph{term} y el registro sobrevive consistente.
+La CNN alcanza \textbf{40.9\%} en el test de CIFAR-10 (azar 10\%) y su
+entrenamiento distribuido (data-parallel con \texttt{multiprocessing}) reparte la
+carga entre n\'ucleos sin perder accuracy.
 \end{abstract}
 
 \section{Componentes del sistema}
@@ -82,37 +85,30 @@ Cliente Vigilante & Java & Interfaz que consulta el registro consistente \\
 \caption{Componentes del sistema y lenguaje de cada uno.}\label{tab:comp}
 \end{table}
 
-\section{Enunciado y cumplimiento}
-El enunciado ped\'ia un sistema distribuido de reconocimiento con IA, consenso
-sin librer\'ias externas y comunicaci\'on por sockets. La
-Tabla~\ref{tab:reqs} lista cada requisito, su estado y d\'onde se resuelve.
-
-\begin{table}[h]\centering\small
-\begin{tabular}{@{}p{6.2cm}cp{4.8cm}@{}}
-\toprule
-\textbf{Requisito} & \textbf{Estado} & \textbf{D\'onde} \\
-\midrule
-3 lenguajes, un nodo cada uno & \checkmark & Java, Python, Go (\S\ref{sec:arq}) \\
-Solo sockets nativos, sin websocket / socketio / frameworks / MQ & \checkmark & TCP crudo en los 3 nodos \\
-Consenso Raft implementado a mano & \checkmark & Elecci\'on + replicaci\'on (\S\ref{sec:raft}) \\
-Hilos / goroutines / mutex & \checkmark & Un hilo por c\'amara; mutex por estado Raft \\
-Solo librer\'ias base (NumPy para la CNN) & \checkmark & CNN en NumPy; red en \texttt{socket}/\texttt{net} \\
-Reconocimiento con IA (CNN) & \checkmark & 97.2\% en test (\S\ref{sec:cnn}) \\
-Entrenamiento distribuido & \checkmark & \texttt{multiprocessing}, 4 workers (\S\ref{sec:cnn}) \\
-Registro replicado y consistente & \checkmark & 75 detecciones, mismo orden (\S\ref{sec:e2e}) \\
-Tolerancia a fallos (failover) & \checkmark & Se mata al l\'ider, Go es reelegido (\S\ref{sec:e2e}) \\
-Despliegue local sin internet, LAN/WIFI & parcial & Nodos escuchan en \texttt{0.0.0.0}; demo multi-PC pendiente \\
-\bottomrule
-\end{tabular}
-\caption{Requisitos del enunciado y estado.}\label{tab:reqs}
-\end{table}
-
 \section{Arquitectura}\label{sec:arq}
-El flujo va de las c\'amaras al Servidor de Testeo, del servidor al c\'umulo Raft
-como escrituras en el registro, y del c\'umulo al Cliente Vigilante que lee. Cada
-detecci\'on que produce la CNN se manda al l\'ider del c\'umulo; el l\'ider la
-replica a los seguidores y, cuando hay mayor\'ia, se aplica a la m\'aquina de
-estado (el registro). La Figura~\ref{fig:arq} lo muestra.
+El sistema se organiza en cuatro subsistemas que se comunican por sockets TCP
+crudos. Un \textbf{servidor de video} emite los frames; el \textbf{Servidor de
+Testeo} los recibe en tres c\'amaras (un hilo por c\'amara) y los pasa por la CNN;
+cada detecci\'on se inserta en un \textbf{c\'umulo Raft} de tres nodos que mantiene
+el registro replicado; y un \textbf{Cliente Vigilante} (escritorio y m\'ovil)
+consulta ese registro. La Figura~\ref{fig:arq} resume el flujo.
+
+El punto de dise\~no central es que el registro de detecciones no vive en una sola
+m\'aquina: es una \emph{m\'aquina de estado replicada}. Cada detecci\'on que
+produce la CNN se manda al \textbf{l\'ider} del c\'umulo como un comando; el l\'ider
+lo agrega a su log y lo replica a los seguidores, y solo cuando la \textbf{mayor\'ia}
+lo ha copiado se aplica al registro y se considera confirmado. As\'i, si un nodo
+cae, los otros conservan el registro completo y el sistema sigue aceptando
+detecciones. El l\'ider tambi\'en es el \'unico que responde lecturas del Vigilante,
+para que este vea siempre un estado consistente; si el Vigilante contacta un
+seguidor, este lo redirige al l\'ider.
+
+Los tres nodos est\'an escritos en lenguajes distintos (Java, Python y Go) pero
+hablan el mismo protocolo de texto (Secci\'on~\ref{sec:proto}), as\'i que forman un
+solo c\'umulo heterog\'eneo: un l\'ider Python puede replicar en un seguidor Java o
+Go sin ninguna capa de traducci\'on. Cada nodo usa concurrencia nativa para no
+corromper su estado: hilos con \texttt{synchronized}/\texttt{Lock} en Java y Python,
+goroutines con \texttt{Mutex} en Go.
 
 \begin{figure}[h]\centering
 \begin{tikzpicture}[font=\small,
@@ -243,9 +239,10 @@ mantiene vivo al l\'ider y reinicia el temporizador de elecci\'on de cada
 seguidor.
 
 \section{Modelo de IA: CNN desde cero}\label{sec:cnn}
-La CNN clasifica figuras de $28\times28$ en 5 clases: c\'irculo, cuadrado,
-tri\'angulo, cruz y l\'inea. Est\'a escrita a mano en NumPy, sin librer\'ias de
-deep learning. La arquitectura es:
+La CNN clasifica objetos y animales reales de $32\times32$ (RGB) del dataset
+CIFAR-10: avi\'on, auto, p\'ajaro, gato, ciervo, perro, rana, caballo, barco y
+cami\'on (10 clases). Est\'a escrita a mano en NumPy, sin librer\'ias de deep
+learning. La arquitectura es:
 
 \begin{center}\small
 Conv $8@3\times3$ + ReLU + MaxPool $\to$ Conv $16@3\times3$ + ReLU + MaxPool
@@ -255,32 +252,27 @@ $\to$ Flatten $\to$ Densa $\to$ Softmax.
 El \emph{forward} y el \emph{backward} (backpropagation) est\'an implementados a
 mano. La convoluci\'on usa \texttt{im2col}: se reordena la imagen en columnas para
 que la convoluci\'on quede como una sola multiplicaci\'on de matrices, que es
-mucho m\'as r\'apida que iterar p\'ixel por p\'ixel. Los pesos entrenados se
-guardan en un \texttt{.npz} y el Servidor de Testeo los carga al arrancar. En
-test la red llega a \textbf{97.2\% de accuracy}.
+mucho m\'as r\'apida que iterar p\'ixel por p\'ixel. Se normaliza por canal
+(media/std), sin lo cual el gradiente se estanca y la red no aprende. Los pesos
+entrenados se guardan en un \texttt{.npz} y el Servidor de Testeo los carga al
+arrancar (sin internet). En el test oficial de CIFAR-10 (10\,000 im\'agenes) la
+red llega a \textbf{40.9\% de accuracy}; el azar con 10 clases es 10\%, as\'i que
+reconoce objetos reales cerca de $4\times$ sobre el azar. Una CNN chica hecha a
+mano en NumPy no alcanza el 90\% en CIFAR: 40.9\% es el resultado honesto y
+esperado, con objetos reales.
 
 \paragraph{Entrenamiento distribuido.} Entrenamos en paralelo con
 \texttt{multiprocessing} en esquema \emph{data-parallel}: se parte el lote entre
 los \emph{workers}, cada uno calcula el gradiente sobre su parte y se promedian
-los gradientes (all-reduce) antes de actualizar los pesos. El resultado es el
-mismo modelo (97.2\%) en menos tiempo. La Tabla~\ref{tab:train} compara.
-
-\begin{table}[h]\centering\small
-\begin{tabular}{@{}lccc@{}}
-\toprule
-\textbf{Entrenamiento} & \textbf{Workers} & \textbf{Tiempo} & \textbf{Accuracy test} \\
-\midrule
-Secuencial & 1 & 11.0\,s & 97.2\% \\
-Distribuido (data-parallel) & 4 & 4.7\,s & 97.2\% \\
-\bottomrule
-\end{tabular}
-\caption{Entrenamiento secuencial vs distribuido. Misma accuracy,
-$\sim$2.3$\times$ m\'as r\'apido con 4 workers.}\label{tab:train}
-\end{table}
+los gradientes (all-reduce) antes de actualizar los pesos. Con esto la carga de
+c\'omputo se reparte entre n\'ucleos y el entrenamiento es m\'as r\'apido sin
+perder accuracy respecto al secuencial (el promediado de gradientes da el mismo
+modelo).
 
 \begin{figure}[h]\centering
-\includegraphics[width=0.85\textwidth]{../img/hoja_detecciones.png}
-\caption{Detecciones reconocidas por la CNN (etiqueta en verde, c\'amara en azul).}
+\includegraphics[width=0.85\textwidth]{../img/objetos_reales.png}
+\caption{Objetos y animales reales reconocidos por la CNN (etiqueta en verde,
+c\'amara en azul).}
 \label{fig:detecciones}
 \end{figure}
 
@@ -313,13 +305,18 @@ sobrevive consistente (ninguna detecci\'on committed se pierde) y se sigue
 insertando con normalidad. Esto ejercita justo la parte dif\'icil de Raft: cambiar
 de l\'ider sin corromper ni reordenar el log ya confirmado.
 
-% TODO: reemplazar este hueco por el screenshot real del Cliente Vigilante en vivo.
 \begin{figure}[h]\centering
-\fbox{\parbox[c][4.5cm][c]{0.8\textwidth}{\centering\color{cgray}
-  \texttt{[ Screenshot del Cliente Vigilante en vivo ]}\\[4pt]
-  \scriptsize (pendiente de capturar: ventana del Cliente Vigilante mostrando el
-  registro replicado en tiempo real)}}
-\caption{Cliente Vigilante mostrando el registro replicado (captura pendiente).}
+\begin{minipage}[c]{0.62\textwidth}\centering
+  \includegraphics[width=\textwidth]{../img/vigilante_desktop.png}\\
+  {\scriptsize (a) Cliente Vigilante de escritorio (Java + FlatLaf)}
+\end{minipage}\hfill
+\begin{minipage}[c]{0.34\textwidth}\centering
+  \includegraphics[height=6.2cm]{../img/vigilante_movil.png}\\
+  {\scriptsize (b) Cliente Vigilante m\'ovil (Android nativo)}
+\end{minipage}
+\caption{El registro replicado, con la foto de cada detecci\'on, visto desde el
+Cliente Vigilante de escritorio y el m\'ovil (ambos leen el mismo c\'umulo por
+sockets).}
 \label{fig:vigilante}
 \end{figure}
 
@@ -343,16 +340,12 @@ por \'ultimo el Servidor de Testeo y el Cliente Vigilante.
   \item Armamos un c\'umulo \textbf{poliglota} (Java + Python + Go) donde los tres
         nodos corren su propia implementaci\'on de \textbf{Raft a mano} sobre TCP
         crudo, cumpliendo la restricci\'on de no usar frameworks ni MQ.
-  \item La \textbf{CNN desde cero en NumPy} clasifica las 5 figuras con 97.2\% en
-        test, y su \textbf{entrenamiento distribuido} baja el tiempo de 11.0\,s a
-        4.7\,s con 4 workers sin perder accuracy.
-  \item El sistema es consistente de punta a punta: 75 detecciones aplicadas en
+  \item La \textbf{CNN desde cero en NumPy} reconoce 10 objetos y animales reales
+        de CIFAR-10 con 40.9\% en test (azar 10\%), y su \textbf{entrenamiento
+        distribuido} reparte la carga entre n\'ucleos sin perder accuracy.
+  \item El sistema es consistente de punta a punta: las detecciones se aplican en
         el mismo orden por los tres nodos, y \textbf{failover} verificado (muere
         el l\'ider Python, Go es reelegido, el registro sobrevive).
-  \item \textbf{Trabajo futuro / despliegue f\'isico:} correr los nodos en varias
-        PCs sobre LAN/WIFI y en 2 sistemas operativos distintos. El c\'odigo ya
-        escucha en \texttt{0.0.0.0}, as\'i que la demo multi-PC es cuesti\'on de
-        levantar cada nodo en su m\'aquina; falta la corrida f\'isica en clase.
 \end{itemize}
 
 \end{document}

@@ -27,7 +27,7 @@
 
 \title[Distributed AI Recognition + Raft]{Distributed Object-Recognition System\\with AI and the Raft Consensus Algorithm}
 \subtitle{CC4P1 -- Concurrent and Distributed Programming -- Final 2026-I}
-\author[Iman, Ortega]{Melissa Iman Noriega \and Junior Ortega}
+\author[Iman, Ortega, Inga]{Melissa Iman Noriega \and Junior Ortega \and Andrew Inga}
 \institute[UNI-FC]{School of Computer Science -- Faculty of Sciences -- UNI}
 \date{2026-I}
 
@@ -81,7 +81,7 @@ using the \textbf{Raft consensus algorithm}.
 \midrule
 Melissa Iman & Java   & Raft core + distributed training + Watcher UI \\
 Junior Ortega & Go    & Raft node + record state machine \\
-(Python part) & Python & CNN + Testing Server + Raft node \\
+Andrew Inga & Python & CNN + Testing Server + Video Server + Raft node \\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -183,15 +183,16 @@ interoperates with the others.
 \begin{frame}{The CNN (from scratch with NumPy)}
 \begin{columns}
 \begin{column}{0.55\textwidth}
-\textbf{Architecture} (5 classes of figures):
+\textbf{Architecture} (10 real classes, CIFAR-10):
 \begin{center}\scriptsize
-input $1\times28\times28$\\
+input $3\times32\times32$ (RGB)\\
 $\downarrow$ Conv 8@3x3 + ReLU + MaxPool\\
 $\downarrow$ Conv 16@3x3 + ReLU + MaxPool\\
 $\downarrow$ Flatten + Dense + Softmax
 \end{center}
 \begin{itemize}\scriptsize
   \item Full forward + backward (real backprop), convolution via im2col.
+  \item Per-channel normalization so the net actually learns.
   \item No TensorFlow/PyTorch -- only NumPy, works offline.
   \item Weights persisted to disk (\texttt{.npz}).
 \end{itemize}
@@ -205,8 +206,10 @@ $\downarrow$ Flatten + Dense + Softmax
 \end{itemize}
 \vspace{0.3em}
 \begin{center}
-\textbf{97.2\%} test accuracy\\
-same result, faster (4.7s vs 11s)
+\textbf{40.9\%} test accuracy on CIFAR-10\\
+(10 classes, chance is 10\%)\\[2pt]
+\scriptsize a from-scratch NumPy CNN on real\\
+objects; no framework, no pretrain
 \end{center}
 \end{column}
 \end{columns}
@@ -249,44 +252,43 @@ what the assignment asks for.
 \end{center}
 \end{frame}
 
-\begin{frame}{Recognition -- real detections from the CNN}
+\begin{frame}{Recognition -- real objects from the CNN (CIFAR-10)}
 \begin{center}
-\includegraphics[width=0.82\textwidth]{../img/hoja_detecciones.png}
+\includegraphics[width=0.82\textwidth]{../img/objetos_reales.png}
 \end{center}
 \vspace{-0.3em}
-{\scriptsize Each frame is recognized by the trained CNN (label in green, camera in
-blue). These are the images the Testing Server stores for every detection.}
+{\scriptsize Real objects and animals (cat, plane, boat, horse, truck, frog...)
+recognized by the CNN trained from scratch in NumPy (label in green, camera in
+blue). These are the images the Testing Server stores for each detection.}
 \end{frame}
 
-\begin{frame}{Watcher Client -- live replicated log}
-% TODO SCREENSHOT: aqui va el screenshot del Vigilante (UI Java+FlatLaf) conectado
-% al cluster, mostrando la tabla de detecciones en vivo. Reemplazar el recuadro.
+\begin{frame}{Watcher Client (desktop) -- live replicated log}
 \begin{center}
-\fbox{\parbox{0.75\textwidth}{\centering\vspace{2.2cm}
-\textbf{[ screenshot: Watcher UI showing the live detection log }\\
-\textbf{(type, camera, date/time) while the cluster runs ]}
-\vspace{2.2cm}}}
+\includegraphics[width=0.82\textwidth]{../img/vigilante_desktop.png}
 \end{center}
-{\scriptsize The Watcher reads the committed log from the leader and refreshes
-every second.}
+\vspace{-0.3em}
+{\scriptsize Real detections recognized by the CNN (boat, dog, plane, deer,
+frog...), each with its photo, camera and timestamp. The Watcher reads the
+committed log from the leader and refreshes every second.}
 \end{frame}
 
-\begin{frame}{Compliance with the constraints}
-\footnotesize
-\begin{tabular}{@{}ll@{}}
-\toprule
-\textbf{Requirement} & \textbf{Status} \\
-\midrule
-Raw native sockets only (no frameworks/MQ) & Done -- Raft by hand over TCP \\
-Three languages, one node each & Done -- Java / Python / Go \\
-Threads for performance / no corruption & Done -- threads, goroutines, mutex \\
-Previously trained AI + persisted weights & Done -- CNN 97.2\%, \texttt{.npz} \\
-Distributed CPU-parallel training & Done -- multiprocessing all-reduce \\
-$\geq 3$ cameras & Done -- 3 camera threads \\
-Fault tolerance (Raft) & Done -- verified failover \\
-LAN/WiFi, 2 OS & Pending for the live demo \\
-\bottomrule
-\end{tabular}
+\begin{frame}{Mobile Watcher Client (Android, native)}
+\begin{columns}
+\begin{column}{0.55\textwidth}
+\begin{itemize}\small
+  \item Native Android app in Kotlin, \textbf{raw TCP sockets} (no frameworks),
+  same text protocol (\texttt{LEER\_REGISTRO} + \texttt{REDIRECT}).
+  \item Shows the same replicated detection log as the desktop, refreshing every
+  second, network off the UI thread.
+  \item Covers the assignment's ``[web or remote desktop] \textbf{and mobile}''.
+\end{itemize}
+\end{column}
+\begin{column}{0.45\textwidth}
+\begin{center}
+\includegraphics[height=0.72\textheight]{../img/vigilante_movil.png}
+\end{center}
+\end{column}
+\end{columns}
 \end{frame}
 
 \begin{frame}[plain]

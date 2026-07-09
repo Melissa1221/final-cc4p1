@@ -52,28 +52,6 @@ El protocolo Raft en texto que comparten los tres lenguajes esta documentado
 arriba de `java/src/raft/Protocolo.java`. Andrew y Junior deben respetar ese
 formato para que sus nodos interoperen con los de Java.
 
-## Parte de Go (ya funciona end-to-end)
-
-El nucleo Raft y la maquina de estado del registro ya estan implementados y
-probados, con el mismo protocolo de texto que Java. Sockets TCP crudos
-(`net.Listen` / `net.Dial`) y goroutines, sin frameworks.
-
-Probar el nucleo Raft de una (3 nodos Go en un proceso, igual que
-`raft.PruebaE2E` en Java):
-
-```bash
-cd go && go run ./cmd/prueba-e2e
-```
-
-Levantar un nodo Go suelto (interopera con nodos Java o Python en la misma
-lista de cluster):
-
-```bash
-cd go && go run ./cmd/arrancar-nodo <miId> <id:host:puerto> ...
-```
-
-Mas detalle en [go/README.md](go/README.md).
-
 ## Requisitos
 
 - Java 8 o superior (probado en OpenJDK 26).

@@ -108,6 +108,62 @@ prueba de caida del lider (failover con reeleccion).
 
 El detalle de como se construyo todo esta en [docs/COMO-LO-HICE.md](docs/COMO-LO-HICE.md).
 
+## Demo en vivo (camara + deteccion + Vigilante)
+
+Flujo completo para la presentacion: el cluster corriendo, una camara reconociendo
+objetos e insertando al cluster, y el registro visto desde el Vigilante de
+escritorio y el movil. Necesita los pesos entrenados (`python/datos/pesos_cifar.npz`).
+
+**1. Levantar el cluster (deja esta terminal abierta):**
+
+```bash
+./scripts/demo-para-movil.sh
+```
+
+Levanta los 3 nodos (Java + Python + Go), el servidor de video y el testeo, y los
+deja corriendo. Muestra los nodos a usar y la IP de la Mac.
+
+**2. Camara + deteccion en vivo (otra terminal).** Dos modos:
+
+Modo seguro para la demo (muestra objetos reales del dataset y los reconoce
+correcto; no falla):
+
+```bash
+cd python
+python3 testeo/camara_demo.py 1 1:127.0.0.1:9001 2:127.0.0.1:9002 3:127.0.0.1:9003
+```
+
+Modo webcam real (abre tu camara; pon el objeto dentro del cuadro azul):
+
+```bash
+cd python
+python3 testeo/camara_real.py 1 1:127.0.0.1:9001 2:127.0.0.1:9002 3:127.0.0.1:9003
+```
+
+La ventana muestra "Detecto: X" con la confianza. Cada deteccion se inserta al
+cluster. Tecla `q` para salir.
+
+> El modelo reconoce 10 clases de CIFAR-10: avion, auto, pajaro, gato, ciervo,
+> perro, rana, caballo, barco, camion. NO reconoce personas. Con la webcam real
+> muestra fotos reales (no dibujos) de las clases que mejor reconoce: auto, avion,
+> camion, caballo, rana. Para que no falle en la demo, usa el modo seguro
+> (`camara_demo.py`).
+
+**3. Cliente Vigilante de escritorio (otra terminal):**
+
+```bash
+java -cp java/out:java/lib/flatlaf-3.4.1.jar vigilante.Vigilante \
+  1:127.0.0.1:9001 2:127.0.0.1:9002 3:127.0.0.1:9003
+```
+
+**4. Cliente Vigilante movil:** abre el proyecto `mobile/` en Android Studio,
+correlo en el emulador, y en la app pon los nodos con `10.0.2.2` (asi ve la Mac el
+emulador): `1:10.0.2.2:9001, 2:10.0.2.2:9002, 3:10.0.2.2:9003`.
+
+**5. Tolerancia a fallos (el punto fuerte).** Con todo corriendo, corta con
+`Ctrl+C` la terminal del nodo lider. Otro nodo es reelegido en segundos y el
+registro sigue intacto en ambos Vigilantes.
+
 ## Requisitos
 
 - Java 8 o superior (probado en OpenJDK 26).

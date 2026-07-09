@@ -31,7 +31,7 @@ def evaluar(red, X, y, batch=200):
     return aciertos / len(X)
 
 
-def entrenar(epocas=12, lr=0.02, batch=64, max_por_clase=800,
+def entrenar(epocas=30, lr=0.15, batch=64, max_por_clase=None,
              clases=None, semilla=0, verbose=True):
     Xtr, ytr, Xte, yte, nombres = cargar(clases=clases,
                                          max_por_clase=max_por_clase)
@@ -41,12 +41,19 @@ def entrenar(epocas=12, lr=0.02, batch=64, max_por_clase=800,
         print("train:", Xtr.shape, " test:", Xte.shape, flush=True)
 
     red = CNN(num_clases, semilla=semilla, canales=3, tam=32)
+    # normalizacion por canal (media/std de train). Se guarda con los pesos, asi
+    # la inferencia normaliza igual sin recalcular nada. Sin esto la red no
+    # aprende (los pixeles [0,1] con media alta hacen que el gradiente se estanque).
+    mean = Xtr.mean(axis=(0, 2, 3), keepdims=True)
+    std = Xtr.std(axis=(0, 2, 3), keepdims=True) + 1e-6
+    red.set_normalizacion(mean, std)
+
     N = len(Xtr)
     rng = np.random.default_rng(semilla)
 
     t0 = time.time()
     for ep in range(epocas):
-        lr_ep = lr * (0.5 ** (ep / 6))
+        lr_ep = lr * (0.5 ** (ep / 10))
         orden = rng.permutation(N)
         perdidas = []
         for i in range(0, N, batch):
@@ -68,9 +75,11 @@ def entrenar(epocas=12, lr=0.02, batch=64, max_por_clase=800,
 
 
 if __name__ == "__main__":
-    # por defecto: 10 clases, subconjunto para que sea tratable en NumPy puro.
-    # se puede pasar max_por_clase por CLI para subir/bajar el tamano.
-    max_pc = int(sys.argv[1]) if len(sys.argv) > 1 else 800
+    # por defecto: 10 clases, 1500 muestras por clase (buen balance de tiempo y
+    # accuracy en NumPy puro). Se puede pasar max_por_clase por CLI; 0 = todas.
+    max_pc = int(sys.argv[1]) if len(sys.argv) > 1 else 1500
+    if max_pc <= 0:
+        max_pc = None
     red, acc, nombres = entrenar(max_por_clase=max_pc)
     os.makedirs("datos", exist_ok=True)
     red.guardar("datos/pesos_cifar.npz")

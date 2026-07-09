@@ -142,6 +142,11 @@ class CNN:
         rng = np.random.default_rng(semilla)
         self.canales = canales
         self.tam = tam
+        # normalizacion de entrada (media/std por canal). Se calcula en el
+        # entrenamiento y se guarda con los pesos, para que la inferencia
+        # normalice igual. Por defecto no cambia nada (media 0, std 1).
+        self.mean = np.zeros((1, canales, 1, 1), dtype=np.float32)
+        self.std = np.ones((1, canales, 1, 1), dtype=np.float32)
         self.capas = [
             Conv(canales, 8, 3, rng), ReLU(), MaxPool(2),
             Conv(8, 16, 3, rng), ReLU(), MaxPool(2),
@@ -155,8 +160,14 @@ class CNN:
         self.densa = Densa(h.shape[1], num_clases, rng)
         self.num_clases = num_clases
 
+    def set_normalizacion(self, mean, std):
+        # mean/std con forma (1, canales, 1, 1)
+        self.mean = mean.astype(np.float32)
+        self.std = std.astype(np.float32)
+
     def forward(self, X):
-        h = X
+        # normaliza la entrada con la media/std guardadas (identidad por defecto)
+        h = (X - self.mean) / self.std
         for c in self.capas:
             h = c.forward(h)
         logits = self.densa.forward(h)
@@ -193,6 +204,8 @@ class CNN:
                 idx += 1
         d["densa_W"] = self.densa.W
         d["densa_b"] = self.densa.b
+        d["norm_mean"] = self.mean
+        d["norm_std"] = self.std
         np.savez(ruta, **d)
 
     def cargar(self, ruta):
@@ -205,3 +218,7 @@ class CNN:
                 idx += 1
         self.densa.W = d["densa_W"]
         self.densa.b = d["densa_b"]
+        # normalizacion (si el .npz la trae; los modelos viejos no la tenian)
+        if "norm_mean" in d and "norm_std" in d:
+            self.mean = d["norm_mean"]
+            self.std = d["norm_std"]

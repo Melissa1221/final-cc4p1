@@ -62,6 +62,8 @@ def cargar(clases=None, max_por_clase=None):
 
     if clases is None:
         clases = list(range(NUM_CLASES))
+    # acepta indices (0..9) o nombres ("gato", "perro", ...)
+    clases = [CLASES.index(c) if isinstance(c, str) else int(c) for c in clases]
     nombres = [CLASES[c] for c in clases]
 
     # filtra las clases pedidas y re-mapea las etiquetas a 0..k-1

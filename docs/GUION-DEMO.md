@@ -43,16 +43,26 @@ cd .../final/repo-setup
 levantan su nodo (el nodo Raft NO usa la CNN ni CIFAR, solo hace consenso). Andrew
 y Junior NO descargan CIFAR ni entrenan nada.
 
-Melissa (una sola vez): descarga el dataset y entrena. Desde `python/`:
+**En la laptop de Melissa el dataset y los pesos YA estan** (`datos/pesos_cifar.npz`
+y `datos/cifar-10-batches-py/`), asi que NO hay que descargar ni entrenar de nuevo.
+Solo verificar que el modelo sigue ahi:
 
 ```bash
 cd python
-mkdir -p datos && cd datos
+python3 -c "import numpy as np; print('modelo OK:', list(np.load('datos/clases_cifar.npy')))"
+cd ..
+```
+
+Si imprime las 10 clases, esta lista. Pasa al PASO 1.
+
+Solo si fuera una laptop NUEVA y limpia (sin el modelo), habria que descargar y
+entrenar una vez:
+
+```bash
+cd python && mkdir -p datos && cd datos
 curl -LO https://www.cs.toronto.edu/~kriz/cifar-10-python.tar.gz
 tar xzf cifar-10-python.tar.gz
-cd ..
-python3 cnn/entrenar_cifar.py 800
-cd ..
+cd .. && python3 cnn/entrenar_cifar.py 800 && cd ..
 ```
 
 Si Andrew o Junior ven el error "no encuentro datos/cifar-10-batches-py", es porque

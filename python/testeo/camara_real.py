@@ -47,8 +47,15 @@ def cargar_modelo():
 
 
 def frame_a_entrada(frame_bgr):
-    # BGR (webcam) -> RGB, 32x32, [0,1], forma (1,3,32,32) que espera la CNN.
-    rgb = cv2.cvtColor(frame_bgr, cv2.COLOR_BGR2RGB)
+    # recorta el CUADRO CENTRAL del frame (donde se pone el objeto) y lo pasa a
+    # 32x32 RGB. Mirar solo el centro evita que el fondo (pared, cara, monitor)
+    # confunda a la CNN. Coloca el objeto en el centro de la camara.
+    h, w = frame_bgr.shape[:2]
+    lado = min(h, w)
+    y0 = (h - lado) // 2
+    x0 = (w - lado) // 2
+    centro = frame_bgr[y0:y0 + lado, x0:x0 + lado]   # cuadrado central
+    rgb = cv2.cvtColor(centro, cv2.COLOR_BGR2RGB)
     chico = cv2.resize(rgb, (32, 32), interpolation=cv2.INTER_AREA)
     x = chico.astype(np.float32) / 255.0        # (32,32,3)
     x = np.transpose(x, (2, 0, 1))              # (3,32,32)
@@ -82,16 +89,29 @@ def main():
         if not ok:
             break
 
-        # reconocer en vivo
+        # reconocer en vivo (con probabilidades para ver la confianza)
+        from cnn.red import softmax
         x = frame_a_entrada(frame)
-        pred = int(red.predecir(x)[0])
+        probs = softmax(red.forward(x))[0]
+        orden_p = np.argsort(probs)[::-1]
+        pred = int(orden_p[0])
         tipo = clases[pred]
 
-        # dibujar la etiqueta en el video (para ver el reconocimiento en vivo)
-        cv2.rectangle(frame, (10, 10), (frame.shape[1] - 10, frame.shape[0] - 10),
-                      (22, 118, 244), 3)
-        cv2.putText(frame, "Detecto: %s" % tipo, (20, 45),
-                    cv2.FONT_HERSHEY_SIMPLEX, 1.0, (30, 157, 78), 2)
+        # dibujar el CUADRO CENTRAL: pon el objeto AHI (es lo que mira la CNN)
+        h, w = frame.shape[:2]
+        lado = min(h, w)
+        cy0, cx0 = (h - lado) // 2, (w - lado) // 2
+        cv2.rectangle(frame, (cx0, cy0), (cx0 + lado, cy0 + lado), (22, 118, 244), 3)
+        cv2.putText(frame, "pon el objeto aqui", (cx0 + 10, cy0 + lado - 15),
+                    cv2.FONT_HERSHEY_SIMPLEX, 0.6, (22, 118, 244), 2)
+        # top-3 con confianza, arriba a la izquierda
+        cv2.putText(frame, "Detecto: %s (%.0f%%)" % (tipo, probs[pred] * 100),
+                    (20, 40), cv2.FONT_HERSHEY_SIMPLEX, 1.0, (30, 157, 78), 2)
+        for k in range(1, 3):
+            c = int(orden_p[k])
+            cv2.putText(frame, "  %s %.0f%%" % (clases[c], probs[c] * 100),
+                        (20, 40 + k * 30), cv2.FONT_HERSHEY_SIMPLEX, 0.6,
+                        (150, 150, 150), 2)
         cv2.imshow("Camara %d - Servidor de Testeo" % id_cam, frame)
 
         # insertar al cluster cada 2 segundos
